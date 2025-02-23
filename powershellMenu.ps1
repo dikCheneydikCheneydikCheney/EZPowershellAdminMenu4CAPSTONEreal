@@ -1,7 +1,7 @@
 #TODO
 #Begin Menu for account creation, removal, information, and modification 
 #Brainstorm more ideas for PS Admin menu
-
+#==========================Powershell main menu====================================
 function Show-Menu
 {
     param(
@@ -16,7 +16,7 @@ function Show-Menu
     Write-Host "Quit (q)"
 
 }
-
+#=========================filehash sub menu=======================================
 function Show-FileHash-Menu
 {
 
@@ -31,7 +31,7 @@ function Show-FileHash-Menu
     Write-Host "7: View MACTripleDES"
     Write-Host "Back To Main Menu (b)"
 }
-
+#======================get, kill, and start processes menu and submenu=============================
 function Show-getKillStartProcesses-Menu
 {
     Clear-Host
@@ -72,6 +72,7 @@ function show-startProcesses-Menu
     Write-Host "2: Start Process As Administrator"
     Write-Host "Back to Main Menu (b)"
 }
+#============================Account Creation, Removal, information, and modification Menus and sub menus==========================================
 do
 {
     Show-Menu
