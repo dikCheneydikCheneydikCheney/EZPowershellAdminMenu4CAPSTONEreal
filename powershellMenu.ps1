@@ -1,7 +1,6 @@
 #TODO
 #Finish Menu for account creation, removal, information, and modification
 #Create Menu for viewing inbound, outbound, and all connections (netstat stuff)
-#Brainstorm more ideas for PS Admin menu
 #==========================Powershell main menu====================================
 function Show-Menu
 {
@@ -14,7 +13,7 @@ function Show-Menu
     Write-Host "1) File Hashes"
     Write-Host "2) Get, Kill, Start Processes"
     Write-Host "3) Account Creation, Removal, Information, Modifications"
-    Write-Host "4) WIP Option"
+    Write-Host "4) Policy Editor"
     Write-Host "5) WIP Option"
     Write-Host "6) WIP Option"
     Write-Host "7) WIP Option"
@@ -99,11 +98,21 @@ function show-LocalAccountInformation-Menu
     Write-Host "4) Get User account via SID"
     Write-Host "b) Back to Account Creation, Removal, Information, Modification Menu"
 }
+
+function Show-PolicyEditor-Menu
+{
+    Clear-Host
+    Write-Host "===Policy Editor==="
+    Write-Host "1) Password Policy Reconfiguration"
+    Write-Host "2) Net Account Monitor"
+    Write-Host "b) Back to Main Menu"
+}
+
 do
 {
     Show-Menu
-    $input = Read-Host "Please make a selection"
-    switch($input)
+    $inputOption = Read-Host "Please make a selection"
+    switch($inputOption)
     {
     '1' {
         Clear-Host
@@ -114,8 +123,8 @@ do
         switch($fileHashInput)
         {
         '1' {
-             Clear-Host
-             $sha1FP = Read-Host "Enter Filepath to file (EX: C:\FilePath\FP\File.example)"
+            Clear-Host
+            $sha1FP = Read-Host "Enter Filepath to file (EX: C:\FilePath\FP\File.example)"
             Get-FileHash $sha1FP -Algorithm SHA1 | Format-List
             Pause
         }'2'{
@@ -316,25 +325,98 @@ do
             Clear-Host
             Write-Host "test1"
             Pause
-        
-        
-
-
-
-
-
-
-
-
-
-
         }'b'{ $loop = $false } 
         }
     }
-
-    #add more menu options, brainstorm MF!
     }'4'{
+        Clear-Host
+        $loop = $true
+        while ($loop){
+        Show-PolicyEditor-Menu
+        $getpolicyEditorInput = Read-Host "Please make a selection"
+        switch($getpolicyEditorInput)
+        {
+        '1'{
+            Clear-Host
+            $minPasswordLength = Read-Host "Enter minimum password length"
+            $minPasswordAge = Read-Host "Enter minimum password age (in days)"
+            $maxPasswordAge = Read-Host "Enter maximum password age (in days)"
+            $lockoutThreshold = Read-Host "Enter lockout threshold"
+        
+            net accounts /minpwlen:$minPasswordLength
+            net accounts /minpwage:$minPasswordAge
+            net accounts /maxpwage:$maxPasswordAge
+            net accounts /lockoutthreshold:$lockoutThreshold
+        
+            Write-Host "Operation Complete"
+            Pause
+        }'2'{
+            Clear-Host
+            # Function to export security settings and parse password policy
+            function Get-PasswordPolicy {
+                $policyFile = "$env:TEMP\secpol.cfg"
 
+                # Export security policies
+                secedit /export /cfg $policyFile /quiet
+            
+                # Read the file and extract password settings
+                $policy = @{}
+                $content = Get-Content $policyFile
+            
+                foreach ($line in $content) {
+                    if ($line -match "MinimumPasswordLength\s*=\s*(\d+)") { $policy["MinPasswordLength"] = $matches[1] }
+                    if ($line -match "MaximumPasswordAge\s*=\s*(\d+)") { $policy["MaxPasswordAge"] = $matches[1] }
+                    if ($line -match "MinimumPasswordAge\s*=\s*(\d+)") { $policy["MinPasswordAge"] = $matches[1] }
+                    if ($line -match "PasswordHistorySize\s*=\s*(\d+)") { $policy["PasswordHistory"] = $matches[1] }
+                    if ($line -match "LockoutBadCount\s*=\s*(\d+)") { $policy["LockoutThreshold"] = $matches[1] }
+                    if ($line -match "ResetLockoutCount\s*=\s*(\d+)") { $policy["LockoutWindow"] = $matches[1] }
+                    if ($line -match "LockoutDuration\s*=\s*(\d+)") { $policy["LockoutDuration"] = $matches[1] }
+                }
+
+                # Clean up the temporary file after parsing
+                Remove-Item $policyFile -Force
+
+                return $policy
+            }
+
+            # Store initial settings
+            $initialPolicy = Get-PasswordPolicy
+
+            Write-Host "Monitoring password policy changes... Press Enter to stop.`n"
+
+            # Monitoring loop
+            while ($true) {
+                Start-Sleep -Seconds 5  # Check every 5 seconds
+            
+                # Check if user pressed Enter
+                if ([console]::KeyAvailable) {
+                    $key = [console]::ReadKey($true)
+                    if ($key.Key -eq "Enter") {
+                        break  # Exit the loop
+                    }
+                }
+            
+                # Get current policy and compare
+                $currentPolicy = Get-PasswordPolicy
+                $changes = @()
+            
+                foreach ($key in $initialPolicy.Keys) {
+                    if ($initialPolicy[$key] -ne $currentPolicy[$key]) {
+                        $changes += "$key changed from $($initialPolicy[$key]) to $($currentPolicy[$key])"
+                    }
+                }
+            
+                if ($changes.Count -gt 0) {
+                    Write-Host "`n[ALERT] Password policy changed:`n" -ForegroundColor Red
+                    $changes | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+                    Write-Host "`nUpdating reference policy..."
+                    $initialPolicy = $currentPolicy  # Update reference to avoid repeated alerts
+                }
+            }
+    
+        }'b'{ $loop = $false }
+        }
+    }
     }'5'{
 
     }'6'{
