@@ -106,6 +106,7 @@ function Show-PolicyEditor-Menu
     Write-Host "===Policy Editor==="
     Write-Host "1) Password Policy Reconfiguration"
     Write-Host "2) Net Account Monitor"
+    Write-Host "3) Policy Update with .INF File (!!!MUST BE ADMIN!!!)"
     Write-Host "b) Back to Main Menu"
 }
 #========================Baseline Information menu=========================
@@ -424,7 +425,15 @@ do
                     $initialPolicy = $currentPolicy  # Update reference to avoid repeated alerts
                 }
             }
-    
+        }'3'{
+            Clear-Host
+            $infFile = Read-Host "Enter the path to the .INF file"
+            
+            secedit /configure /db secedit.sdb /cfg $infFile
+
+            Write-Host "Policy Updated"
+            Pause
+
         }'b'{ $loop = $false }
         }
     }
