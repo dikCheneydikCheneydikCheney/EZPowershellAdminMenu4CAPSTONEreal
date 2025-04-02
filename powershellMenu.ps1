@@ -350,16 +350,21 @@ do
         {
         '1'{
             Clear-Host
-            $minPasswordLength = Read-Host "Enter minimum password length"
-            $minPasswordAge = Read-Host "Enter minimum password age (in days)"
-            $maxPasswordAge = Read-Host "Enter maximum password age (in days)"
-            $lockoutThreshold = Read-Host "Enter lockout threshold"
-        
-            net accounts /minpwlen:$minPasswordLength
-            net accounts /minpwage:$minPasswordAge
-            net accounts /maxpwage:$maxPasswordAge
-            net accounts /lockoutthreshold:$lockoutThreshold
-        
+            try {
+                $minPasswordLength = Read-Host "Enter minimum password length" # Get password length
+                $minPasswordAge = Read-Host "Enter minimum password age (in days)" # Get minimum age
+                $maxPasswordAge = Read-Host "Enter maximum password age (in days)" # Get maximum age
+                $lockoutThreshold = Read-Host "Enter lockout threshold" # Get lockout threshold
+            
+                net accounts /minpwlen:$minPasswordLength # Set password length
+                net accounts /minpwage:$minPasswordAge # Set minimum age
+                net accounts /maxpwage:$maxPasswordAge # Set maximum age
+                net accounts /lockoutthreshold:$lockoutThreshold # Set lockout threshold
+            }
+            catch {
+                Write-Error "An error occurred: $($_.Exception.Message)"
+            }
+            
             Write-Host "Operation Complete"
             Pause
         }'2'{
@@ -427,9 +432,13 @@ do
             }
         }'3'{
             Clear-Host
-            $infFile = Read-Host "Enter the path to the .INF file"
-            
-            secedit /configure /db secedit.sdb /cfg $infFile
+            try {
+            $infFile = Read-Host "Enter the path to the .INF file" # Get INF file path
+            secedit /configure /db secedit.sdb /cfg $infFile # Apply INF settings
+            }
+            catch {
+                Write-Error "An error occurred: $($_.Exception.Message)"
+            }
 
             Write-Host "Policy Updated"
             Pause
