@@ -1,6 +1,7 @@
 #TODO
 #Finish Menu for account creation, removal, information, and modification
 #Create Menu for viewing inbound, outbound, and all connections (netstat stuff)
+#Brainstorm more ideas for PS Admin menu
 #==========================Powershell main menu====================================
 function Show-Menu
 {
@@ -14,7 +15,7 @@ function Show-Menu
     Write-Host "2) Get, Kill, Start Processes"
     Write-Host "3) Account Creation, Removal, Information, Modifications"
     Write-Host "4) Policy Editor"
-    Write-Host "5) WIP Option"
+    Write-Host "5) Baseline Information"
     Write-Host "6) WIP Option"
     Write-Host "7) WIP Option"
     Write-Host "Quit (q)"
@@ -98,7 +99,7 @@ function show-LocalAccountInformation-Menu
     Write-Host "4) Get User account via SID"
     Write-Host "b) Back to Account Creation, Removal, Information, Modification Menu"
 }
-
+#========================Policy Editor menu=========================
 function Show-PolicyEditor-Menu
 {
     Clear-Host
@@ -107,7 +108,17 @@ function Show-PolicyEditor-Menu
     Write-Host "2) Net Account Monitor"
     Write-Host "b) Back to Main Menu"
 }
+#========================Baseline Information menu=========================
 
+function Show-BaselineInformation-Menu
+{
+    Clear-Host
+    Write-Host "===Baseline Information==="
+    Write-Host "1) Compare Users with CSV"
+    Write-Host "b) Back to Main Menu"
+}
+
+#========================Main Menu Loop=========================
 do
 {
     Show-Menu
@@ -418,7 +429,89 @@ do
         }
     }
     }'5'{
+        Clear-Host
+        $loop = $true
+        while ($loop){
+        show-BaselineInformation-Menu
+        $getBaselineInformationInput = Read-Host "Please make a selection"
+        switch($getBaselineInformationInput)
+        {
+        '1'{
+            Clear-Host
+            $compareCSV = Read-Host "Enter the CSV file you'd like to compare (Or create one by entering 'c')"
 
+            if ($compareCSV -eq 'c'){
+                #create CSV file
+                # Get all local users
+                $localUsers = Get-LocalUser
+                
+                # Export to CSV
+                $localUsers | Export-Csv -Path "local_users.csv" -NoTypeInformation
+                Write-Host "Created a file with all current local users: local_users.csv"
+            }
+            else{
+                while ($true) {
+                    try {
+                        $inventoryUsers = Import-Csv -Path $compareCSV # Import the CSV as a list of users
+                        break
+                    }
+                    catch [System.IO.FileNotFoundException] {
+                        Write-Host "File Path Not Found: $CSVPath"
+                    }
+                    catch {
+                        Write-Host "An Error Has Occurred: $_"
+                    }
+            
+                }
+                
+                $systemUsers = Get-LocalUser # Get all local users on the system
+            
+                # Arrays to store users who are or aren't on the system
+                $onSystemUsers = @()
+                $notOnSystemUsers = @()
+            
+                # Compare each user in the inventory to the system users
+                foreach ($invUser in $inventoryUsers) {
+                    foreach ($sysUser in $systemUsers) {
+                        if ($invUser.Name -eq $sysUser.Name) {
+                            $onSystemUsers += $invUser.Name
+                        }
+                    }
+                    
+                    # If the user is not found in system, add to the not on system list
+                    if ($onSystemUsers -notcontains $invUser.Name) {
+                        $notOnSystemUsers += $invUser.Name
+                    }
+                }
+            
+                # Arrays to store users who are or aren't in the inventory
+                $inInventoryUsers = @()
+                $notInInventoryUsers = @()
+            
+                # Compare each system user to the inventory users
+                foreach ($sysUser in $systemUsers) {
+                    foreach ($invUser in $inventoryUsers) {
+                        if ($sysUser.Name -eq $invUser.Name) {
+                            $inInventoryUsers += $sysUser.Name
+                        }
+                    }
+            
+                    # If the system user is not in inventory, add to the not in inventory list
+                    if ($inInventoryUsers -notcontains $sysUser.Name) {
+                        $notInInventoryUsers += $sysUser.Name
+                    }
+                }
+            
+                # Output the results
+                Write-Host "`nUsers Not on the System:"
+                Write-Host $notOnSystemUsers -ForegroundColor Red
+                Write-Host "`nUsers Not in the Inventory:"
+                Write-Host $notInInventoryUsers -ForegroundColor Red
+            }
+            Pause
+        }'b'{ $loop = $false }
+        }
+    }
     }'6'{
 
     }'7'{
