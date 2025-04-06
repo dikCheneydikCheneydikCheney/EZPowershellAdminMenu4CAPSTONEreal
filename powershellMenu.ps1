@@ -17,7 +17,7 @@ function Show-Menu
     Write-Host "4) Policy Editor"
     Write-Host "5) Baseline Information"
     Write-Host "6) Networking"
-    Write-Host "7) WIP Option"
+    Write-Host "7) CPU, Memory, Disk Information"
     Write-Host "Quit (q)"
 
 }
@@ -127,7 +127,7 @@ function Show-Networking-Menu
     Write-Host "3) Initiate Connections"
     Write-Host "b) Back to Main Menu"
 }
-
+#========================Initiate Connection menu=========================
 function Show-InitiateConnection-Menu
 {
     Clear-Host
@@ -591,7 +591,53 @@ do
         }
     }
     }'7'{
-
+        # CPU Information
+        Write-Host "--- CPU Information ---"
+        $cpuInfo = Get-CimInstance Win32_Processor
+        Write-Host "Name: $($cpuInfo.Name)"
+        $cpuCounter = Get-Counter '\Processor(_Total)\% Processor Time' | Select-Object -ExpandProperty CounterSamples | Select-Object CookedValue
+        Write-Host "CPU Load: $($cpuCounter.CookedValue)%"
+            
+        # Memory Information
+        Write-Host
+        Write-Host "--- Memory Information ---"
+        $osInfo = Get-CimInstance Win32_OperatingSystem
+        $totalMemoryGB = [math]::Round($osInfo.TotalVisibleMemorySize / 1GB, 2)
+        $freeMemoryGB = [math]::Round($osInfo.FreePhysicalMemory / 1GB, 2)
+        $usedMemoryGB = $totalMemoryGB - $freeMemoryGB
+        Write-Host "Total Memory: $($totalMemoryGB) GB"
+        Write-Host "Used Memory: $($usedMemoryGB) GB"
+        Write-Host "Free Memory: $($freeMemoryGB) GB"
+        Write-Host "Memory Usage Percentage: $([math]::Round(($usedMemoryGB / $totalMemoryGB) * 100, 2))%"
+            
+        # Disk Usage Information
+        Write-Host
+        Write-Host "--- Disk Usage Information ---"
+        $disks = Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
+        foreach ($disk in $disks) {
+            $sizeGB = [math]::Round($disk.Size / 1GB, 2)
+            $freeSpaceGB = [math]::Round($disk.FreeSpace / 1GB, 2)
+            $usagePercent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2)
+            Write-Host "DeviceID: $($disk.DeviceID), VolumeName: $($disk.VolumeName), Size: $($sizeGB) GB, FreeSpace: $($freeSpaceGB) GB, Usage: $($usagePercent)%"
+        }
+        
+        # Physical Disk Information
+        Write-Host
+        Write-Host "--- Physical Disk Information ---"
+        $physicalDisks = Get-PhysicalDisk
+        foreach ($physicalDisk in $physicalDisks) {
+            Write-Host "DeviceID: $($physicalDisk.DeviceId), FriendlyName: $($physicalDisk.FriendlyName), MediaType: $($physicalDisk.MediaType), Size: $([math]::Round($physicalDisk.Size / 1GB, 2)) GB"
+        }
+        
+        # Disk IO Information
+        Write-Host
+        Write-Host "--- Disk IO Information ---"
+        $diskCounters = Get-Counter '\PhysicalDisk(*)\Disk Reads/sec', '\PhysicalDisk(*)\Disk Writes/sec' | Select-Object -ExpandProperty CounterSamples
+        foreach ($counter in $diskCounters) {
+            Write-Host "InstanceName: $($counter.InstanceName), CookedValue: $($counter.CookedValue)"
+        }
+        Pause
+        
     }'Q'{
     return
     }
