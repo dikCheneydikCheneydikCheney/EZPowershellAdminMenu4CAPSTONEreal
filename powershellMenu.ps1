@@ -16,7 +16,7 @@ function Show-Menu
     Write-Host "3) Account Creation, Removal, Information, Modifications"
     Write-Host "4) Policy Editor"
     Write-Host "5) Baseline Information"
-    Write-Host "6) WIP Option"
+    Write-Host "6) Networking"
     Write-Host "7) WIP Option"
     Write-Host "Quit (q)"
 
@@ -46,7 +46,7 @@ function Show-getKillStartProcesses-Menu
     Write-Host "3: Start Processes"
     Write-Host "Back to Main Menu (b)"
 }
-
+#========================Get Processes menu=========================
 function Show-getProcesses-Menu
 {
     Clear-Host
@@ -57,7 +57,7 @@ function Show-getProcesses-Menu
     Write-Host "4: Get Process Via PID"
     Write-Host "Back to Main Menu (b)"
 }
-
+#========================Kill Processes menu=========================
 function Show-killProcesses-Menu
 {
     Clear-Host
@@ -68,7 +68,7 @@ function Show-killProcesses-Menu
     Write-Host "Back to Main Menu (b)"
     
 }
-
+#========================Start Processes menu=========================
 function show-startProcesses-Menu
 {
     Clear-Host
@@ -110,12 +110,30 @@ function Show-PolicyEditor-Menu
     Write-Host "b) Back to Main Menu"
 }
 #========================Baseline Information menu=========================
-
 function Show-BaselineInformation-Menu
 {
     Clear-Host
     Write-Host "===Baseline Information==="
     Write-Host "1) Compare Users with CSV"
+    Write-Host "b) Back to Main Menu"
+}
+#========================Networking menu=========================
+function Show-Networking-Menu
+{
+    Clear-Host
+    Write-Host "===Networking==="
+    Write-Host "1) View Active Connections"
+    Write-Host "2) Close Active Connection"
+    Write-Host "3) Initiate Connections"
+    Write-Host "b) Back to Main Menu"
+}
+
+function Show-InitiateConnection-Menu
+{
+    Clear-Host
+    Write-Host "===Initiate Connection==="
+    Write-Host "1) Invoke Web Request"
+    Write-Host "2) SSH Connection"
     Write-Host "b) Back to Main Menu"
 }
 
@@ -531,7 +549,47 @@ do
         }
     }
     }'6'{
+        Clear-Host
+        $loop = $true
+        while ($loop){
+        Show-Networking-Menu
+        $getNetworkingInput = Read-Host "Please make a selection"
+        switch($getNetworkingInput)
+        {
+        '1'{
+            Clear-Host
+            netstat -ano
+            Pause
+        }'2'{
+            Clear-Host
+            $closeConnection = Read-Host "Enter the PID of the connection you'd like to close"
+            Stop-Process -Id $closeConnection -Force
+            Pause
+        }'3'{
+            Clear-Host
+            $loopInitiateConnection = $true
+            while ($loopInitiateConnection){
+            Show-InitiateConnection-Menu
+            $initiateConnectionInput = Read-Host "Please make a selection"
+            switch($initiateConnectionInput)
+            {
+            '1'{
+                Clear-Host
+                $invokeWebRequest = Read-Host "Enter the IP or URL you'd like to connect to"
+                Invoke-WebRequest -Uri "http://$invokeWebRequest"
+                Pause
+            }'2'{
+                Clear-Host
+                $sshConnection = Read-Host "Enter the IP address of the SSH connection"
+                ssh $sshConnection
+                Pause
+            }'b'{ $loopInitiateConnection = $false }
+            }
+            }
 
+        } 'b'{ $loop = $false }
+        }
+    }
     }'7'{
 
     }'Q'{
