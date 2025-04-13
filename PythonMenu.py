@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+#Sysadmin tasks made for Linux systems
+
 import os
 import hashlib
 import subprocess
