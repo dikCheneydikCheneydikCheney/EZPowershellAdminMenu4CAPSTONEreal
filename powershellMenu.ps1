@@ -1,6 +1,7 @@
 #TODO
 #Finish Menu for account creation, removal, information, and modification
 #Create Menu for viewing inbound, outbound, and all connections (netstat stuff)
+#Brainstorm more ideas for PS Admin menu
 #==========================Powershell main menu====================================
 function Show-Menu
 {
@@ -14,9 +15,9 @@ function Show-Menu
     Write-Host "2) Get, Kill, Start Processes"
     Write-Host "3) Account Creation, Removal, Information, Modifications"
     Write-Host "4) Policy Editor"
-    Write-Host "5) WIP Option"
-    Write-Host "6) WIP Option"
-    Write-Host "7) WIP Option"
+    Write-Host "5) Baseline Information"
+    Write-Host "6) Networking"
+    Write-Host "7) CPU, Memory, Disk Information"
     Write-Host "Quit (q)"
 
 }
@@ -45,7 +46,7 @@ function Show-getKillStartProcesses-Menu
     Write-Host "3: Start Processes"
     Write-Host "Back to Main Menu (b)"
 }
-
+#========================Get Processes menu=========================
 function Show-getProcesses-Menu
 {
     Clear-Host
@@ -56,7 +57,7 @@ function Show-getProcesses-Menu
     Write-Host "4: Get Process Via PID"
     Write-Host "Back to Main Menu (b)"
 }
-
+#========================Kill Processes menu=========================
 function Show-killProcesses-Menu
 {
     Clear-Host
@@ -67,7 +68,7 @@ function Show-killProcesses-Menu
     Write-Host "Back to Main Menu (b)"
     
 }
-
+#========================Start Processes menu=========================
 function show-startProcesses-Menu
 {
     Clear-Host
@@ -98,16 +99,45 @@ function show-LocalAccountInformation-Menu
     Write-Host "4) Get User account via SID"
     Write-Host "b) Back to Account Creation, Removal, Information, Modification Menu"
 }
-
+#========================Policy Editor menu=========================
 function Show-PolicyEditor-Menu
 {
     Clear-Host
     Write-Host "===Policy Editor==="
     Write-Host "1) Password Policy Reconfiguration"
     Write-Host "2) Net Account Monitor"
+    Write-Host "3) Policy Update with .INF File (!!!MUST BE ADMIN!!!)"
+    Write-Host "b) Back to Main Menu"
+}
+#========================Baseline Information menu=========================
+function Show-BaselineInformation-Menu
+{
+    Clear-Host
+    Write-Host "===Baseline Information==="
+    Write-Host "1) Compare Users with CSV"
+    Write-Host "b) Back to Main Menu"
+}
+#========================Networking menu=========================
+function Show-Networking-Menu
+{
+    Clear-Host
+    Write-Host "===Networking==="
+    Write-Host "1) View Active Connections"
+    Write-Host "2) Close Active Connection"
+    Write-Host "3) Initiate Connections"
+    Write-Host "b) Back to Main Menu"
+}
+#========================Initiate Connection menu=========================
+function Show-InitiateConnection-Menu
+{
+    Clear-Host
+    Write-Host "===Initiate Connection==="
+    Write-Host "1) Invoke Web Request"
+    Write-Host "2) SSH Connection"
     Write-Host "b) Back to Main Menu"
 }
 
+#========================Main Menu Loop=========================
 do
 {
     Show-Menu
@@ -338,16 +368,21 @@ do
         {
         '1'{
             Clear-Host
-            $minPasswordLength = Read-Host "Enter minimum password length"
-            $minPasswordAge = Read-Host "Enter minimum password age (in days)"
-            $maxPasswordAge = Read-Host "Enter maximum password age (in days)"
-            $lockoutThreshold = Read-Host "Enter lockout threshold"
-        
-            net accounts /minpwlen:$minPasswordLength
-            net accounts /minpwage:$minPasswordAge
-            net accounts /maxpwage:$maxPasswordAge
-            net accounts /lockoutthreshold:$lockoutThreshold
-        
+            try {
+                $minPasswordLength = Read-Host "Enter minimum password length" # Get password length
+                $minPasswordAge = Read-Host "Enter minimum password age (in days)" # Get minimum age
+                $maxPasswordAge = Read-Host "Enter maximum password age (in days)" # Get maximum age
+                $lockoutThreshold = Read-Host "Enter lockout threshold" # Get lockout threshold
+            
+                net accounts /minpwlen:$minPasswordLength # Set password length
+                net accounts /minpwage:$minPasswordAge # Set minimum age
+                net accounts /maxpwage:$maxPasswordAge # Set maximum age
+                net accounts /lockoutthreshold:$lockoutThreshold # Set lockout threshold
+            }
+            catch {
+                Write-Error "An error occurred: $($_.Exception.Message)"
+            }
+            
             Write-Host "Operation Complete"
             Pause
         }'2'{
@@ -413,16 +448,196 @@ do
                     $initialPolicy = $currentPolicy  # Update reference to avoid repeated alerts
                 }
             }
-    
+        }'3'{
+            Clear-Host
+            try {
+            $infFile = Read-Host "Enter the path to the .INF file" # Get INF file path
+            secedit /configure /db secedit.sdb /cfg $infFile # Apply INF settings
+            }
+            catch {
+                Write-Error "An error occurred: $($_.Exception.Message)"
+            }
+
+            Write-Host "Policy Updated"
+            Pause
+
         }'b'{ $loop = $false }
         }
     }
     }'5'{
+        Clear-Host
+        $loop = $true
+        while ($loop){
+        show-BaselineInformation-Menu
+        $getBaselineInformationInput = Read-Host "Please make a selection"
+        switch($getBaselineInformationInput)
+        {
+        '1'{
+            Clear-Host
+            $compareCSV = Read-Host "Enter the CSV file you'd like to compare (Or create one by entering 'c')"
 
+            if ($compareCSV -eq 'c'){
+                #create CSV file
+                # Get all local users
+                $localUsers = Get-LocalUser
+                
+                # Export to CSV
+                $localUsers | Export-Csv -Path "local_users.csv" -NoTypeInformation
+                Write-Host "Created a file with all current local users: local_users.csv"
+            }
+            else{
+                while ($true) {
+                    try {
+                        $inventoryUsers = Import-Csv -Path $compareCSV # Import the CSV as a list of users
+                        break
+                    }
+                    catch [System.IO.FileNotFoundException] {
+                        Write-Host "File Path Not Found: $CSVPath"
+                    }
+                    catch {
+                        Write-Host "An Error Has Occurred: $_"
+                    }
+            
+                }
+                
+                $systemUsers = Get-LocalUser # Get all local users on the system
+            
+                # Arrays to store users who are or aren't on the system
+                $onSystemUsers = @()
+                $notOnSystemUsers = @()
+            
+                # Compare each user in the inventory to the system users
+                foreach ($invUser in $inventoryUsers) {
+                    foreach ($sysUser in $systemUsers) {
+                        if ($invUser.Name -eq $sysUser.Name) {
+                            $onSystemUsers += $invUser.Name
+                        }
+                    }
+                    
+                    # If the user is not found in system, add to the not on system list
+                    if ($onSystemUsers -notcontains $invUser.Name) {
+                        $notOnSystemUsers += $invUser.Name
+                    }
+                }
+            
+                # Arrays to store users who are or aren't in the inventory
+                $inInventoryUsers = @()
+                $notInInventoryUsers = @()
+            
+                # Compare each system user to the inventory users
+                foreach ($sysUser in $systemUsers) {
+                    foreach ($invUser in $inventoryUsers) {
+                        if ($sysUser.Name -eq $invUser.Name) {
+                            $inInventoryUsers += $sysUser.Name
+                        }
+                    }
+            
+                    # If the system user is not in inventory, add to the not in inventory list
+                    if ($inInventoryUsers -notcontains $sysUser.Name) {
+                        $notInInventoryUsers += $sysUser.Name
+                    }
+                }
+            
+                # Output the results
+                Write-Host "`nUsers Not on the System:"
+                Write-Host $notOnSystemUsers -ForegroundColor Red
+                Write-Host "`nUsers Not in the Inventory:"
+                Write-Host $notInInventoryUsers -ForegroundColor Red
+            }
+            Pause
+        }'b'{ $loop = $false }
+        }
+    }
     }'6'{
+        Clear-Host
+        $loop = $true
+        while ($loop){
+        Show-Networking-Menu
+        $getNetworkingInput = Read-Host "Please make a selection"
+        switch($getNetworkingInput)
+        {
+        '1'{
+            Clear-Host
+            netstat -ano
+            Pause
+        }'2'{
+            Clear-Host
+            $closeConnection = Read-Host "Enter the PID of the connection you'd like to close"
+            Stop-Process -Id $closeConnection -Force
+            Pause
+        }'3'{
+            Clear-Host
+            $loopInitiateConnection = $true
+            while ($loopInitiateConnection){
+            Show-InitiateConnection-Menu
+            $initiateConnectionInput = Read-Host "Please make a selection"
+            switch($initiateConnectionInput)
+            {
+            '1'{
+                Clear-Host
+                $invokeWebRequest = Read-Host "Enter the IP or URL you'd like to connect to"
+                Invoke-WebRequest -Uri "http://$invokeWebRequest"
+                Pause
+            }'2'{
+                Clear-Host
+                $sshConnection = Read-Host "Enter the IP address of the SSH connection"
+                ssh $sshConnection
+                Pause
+            }'b'{ $loopInitiateConnection = $false }
+            }
+            }
 
+        } 'b'{ $loop = $false }
+        }
+    }
     }'7'{
-
+        # CPU Information
+        Write-Host "--- CPU Information ---"
+        $cpuInfo = Get-CimInstance Win32_Processor
+        Write-Host "Name: $($cpuInfo.Name)"
+        $cpuCounter = Get-Counter '\Processor(_Total)\% Processor Time' | Select-Object -ExpandProperty CounterSamples | Select-Object CookedValue
+        Write-Host "CPU Load: $($cpuCounter.CookedValue)%"
+            
+        # Memory Information
+        Write-Host
+        Write-Host "--- Memory Information ---"
+        $osInfo = Get-CimInstance Win32_OperatingSystem
+        $totalMemoryGB = [math]::Round($osInfo.TotalVisibleMemorySize / 1GB, 2)
+        $freeMemoryGB = [math]::Round($osInfo.FreePhysicalMemory / 1GB, 2)
+        $usedMemoryGB = $totalMemoryGB - $freeMemoryGB
+        Write-Host "Total Memory: $($totalMemoryGB) GB"
+        Write-Host "Used Memory: $($usedMemoryGB) GB"
+        Write-Host "Free Memory: $($freeMemoryGB) GB"
+        Write-Host "Memory Usage Percentage: $([math]::Round(($usedMemoryGB / $totalMemoryGB) * 100, 2))%"
+            
+        # Disk Usage Information
+        Write-Host
+        Write-Host "--- Disk Usage Information ---"
+        $disks = Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
+        foreach ($disk in $disks) {
+            $sizeGB = [math]::Round($disk.Size / 1GB, 2)
+            $freeSpaceGB = [math]::Round($disk.FreeSpace / 1GB, 2)
+            $usagePercent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2)
+            Write-Host "DeviceID: $($disk.DeviceID), VolumeName: $($disk.VolumeName), Size: $($sizeGB) GB, FreeSpace: $($freeSpaceGB) GB, Usage: $($usagePercent)%"
+        }
+        
+        # Physical Disk Information
+        Write-Host
+        Write-Host "--- Physical Disk Information ---"
+        $physicalDisks = Get-PhysicalDisk
+        foreach ($physicalDisk in $physicalDisks) {
+            Write-Host "DeviceID: $($physicalDisk.DeviceId), FriendlyName: $($physicalDisk.FriendlyName), MediaType: $($physicalDisk.MediaType), Size: $([math]::Round($physicalDisk.Size / 1GB, 2)) GB"
+        }
+        
+        # Disk IO Information
+        Write-Host
+        Write-Host "--- Disk IO Information ---"
+        $diskCounters = Get-Counter '\PhysicalDisk(*)\Disk Reads/sec', '\PhysicalDisk(*)\Disk Writes/sec' | Select-Object -ExpandProperty CounterSamples
+        foreach ($counter in $diskCounters) {
+            Write-Host "InstanceName: $($counter.InstanceName), CookedValue: $($counter.CookedValue)"
+        }
+        Pause
+        
     }'Q'{
     return
     }
